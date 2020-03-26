@@ -37,9 +37,10 @@ class AuthWindow {
       const current = this.window.webContents.history[this.window.webContents.currentIndex]
       if (current.startsWith(this.redirectUri)) {
         this.window.webContents
-          .executeJavaScript('getAuthRedirectCode()')
-          .then((code) => {
-            console.log(code)
+          .executeJavaScript('getAccessToken()')
+          .then((jsonString) => JSON.parse(jsonString))
+          .then((accessToken) => {
+            console.log(accessToken)
           })
       }
     })
