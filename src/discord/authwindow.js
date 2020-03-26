@@ -32,6 +32,17 @@ class AuthWindow {
       `redirect_uri=${encodeURIComponent(this.redirectUri)}&`+
       'prompt=none'
     )
+
+    this.window.webContents.on('dom-ready', () => {
+      const current = this.window.webContents.history[this.window.webContents.currentIndex]
+      if (current.startsWith(this.redirectUri)) {
+        this.window.webContents
+          .executeJavaScript('getAuthRedirectCode()')
+          .then((code) => {
+            console.log(code)
+          })
+      }
+    })
   }
 }
 

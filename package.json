@@ -2,10 +2,11 @@
   "name": "better-overlay",
   "version": "1.0.0",
   "description": "",
-  "main": "client/index.js",
+  "main": "src/client.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "electron client/"
+    "start": "electron src/client",
+    "start-authserver": "node src/authserver"
   },
   "author": "",
   "license": "MIT",
@@ -14,7 +15,6 @@
   },
   "dependencies": {
     "discord.js": "^12.0.2",
-    "express": "^4.17.1",
-    "greenlock-express": "^4.0.3"
+    "express": "^4.17.1"
   }
 }
