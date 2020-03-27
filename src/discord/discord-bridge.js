@@ -29,7 +29,7 @@ class DiscordBridge extends EventEmitter {
   }
 
   connect() {
-    return new Promise(
+    new Promise(
       ((resolve, reject) => {
         this
           .tryConnect(resolve, reject)
@@ -42,7 +42,7 @@ class DiscordBridge extends EventEmitter {
             const intervalTimeout = setInterval(() => {
               this.tryConnect(resolve, reject, intervalTimeout)
             }, connectRetry)
-        })
+          })
       }))
       .then(() => { return this.login() })
   }
@@ -115,20 +115,28 @@ class DiscordBridge extends EventEmitter {
     )
 
     // initial state setting
-    this.client.getVoiceSettings()
-      .then(({ mute }) => {
-        this.userState.isMuted = mute
-        this.emitActiveMuted()
-      })
+    // this.client.getVoiceSettings()
+    //   .then(({ mute }) => {
+    //     this.userState.isMuted = mute
+    //     this.emitActiveMuted()
+    //   })
 
     // this command seems to succeed when the user is _not_ in a channel
     // if they _are_ in a channel then this request never completes
     // if that's the case then the lib seems to be stuck waiting for this command to complete
+    // let getChannelResponse = false
     // this.client.request('GET_SELECTED_VOICE_CHANNEL')
     //   .then((channelId) => {
+    //     getChannelResponse = true
     //     this.userState.inChannel = channelId !== null
     //     this.emitActiveMuted()
     //   })
+    // setTimeout(() => {
+    //   if (!getChannelResponse) {
+    //     this.userState.inChannel = true
+    //     this.emitActiveMuted()
+    //   }
+    // }, 1500)
   }
 }
 

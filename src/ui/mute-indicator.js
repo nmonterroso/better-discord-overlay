@@ -46,6 +46,7 @@ class MuteIndicator {
 
   subscribe() {
     this.bridge.on(events.SHOW_MUTE_INDICATOR, this.onShowMuteIndicator)
+    this.bridge.on(events.DISCONNECT, this.onDisconnect)
   }
 
   onShowMuteIndicator = (show) => {
@@ -54,6 +55,10 @@ class MuteIndicator {
     } else if (!show && this.window.isVisible()) {
       this.window.hide()
     }
+  }
+
+  onDisconnect = () => {
+    this.window.hide()
   }
 }
 

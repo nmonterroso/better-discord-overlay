@@ -11,7 +11,7 @@ app.whenReady().then(() => {
 
   muteIndicator.init()
 
-  // TODO: read cached credentials
+  // TODO: read cached credentials, handle auth refresh
   new AuthWindow(env.clientId, env.authRedirectUri)
     .auth()
     .catch((endState) => {
@@ -21,5 +21,5 @@ app.whenReady().then(() => {
       // TODO: store payload somewhere?
       return bridge.withAccessToken(payload.access_token)
     })
-    .then(() => { return bridge.connect() })
+    .then(() => { bridge.connect() })
 })
