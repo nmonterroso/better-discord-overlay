@@ -114,19 +114,12 @@ class DiscordBridge extends EventEmitter {
 
     // this command seems to succeed when the user is _not_ in a channel
     // if they _are_ in a channel then this request never completes
-    let voiceChannelResponse = false
-    this.client.request('GET_SELECTED_VOICE_CHANNEL')
-      .then((channelId) => {
-        voiceChannelResponse = true
-        this.userState.inChannel = channelId !== null
-        this.emitActiveMuted()
-      })
-    setTimeout(() => {
-      if (!voiceChannelResponse) {
-        this.userState.inChannel = true
-        this.emitActiveMuted()
-      }
-    }, 1000)
+    // if that's the case then the lib seems to be stuck waiting for this command to complete
+    // this.client.request('GET_SELECTED_VOICE_CHANNEL')
+    //   .then((channelId) => {
+    //     this.userState.inChannel = channelId !== null
+    //     this.emitActiveMuted()
+    //   })
   }
 }
 

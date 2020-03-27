@@ -71,7 +71,7 @@ class AuthWindow {
           reject(END_STATES.ERROR_UNKNOWN)
         })
         .finally(() => {
-          this.window.hide() // TODO: how can i use `.close` without exiting the app?
+          this.window.close()
         })
     }
   }
