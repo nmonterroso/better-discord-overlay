@@ -9,6 +9,8 @@ function createWindow() {
   })
 }
 
+const scopes = ['rpc', 'rpc.api']
+
 const END_STATES = {
   ERROR_UNKNOWN: 1,
   AUTH_CANCELED: 2,
@@ -47,7 +49,7 @@ class AuthWindow {
       'https://discordapp.com/api/oauth2/authorize?'+
       'response_type=code&'+
       `client_id=${this.clientId}&`+
-      'scope=identify&'+
+      `scope=${encodeURIComponent(scopes.join(' '))}&`+
       `redirect_uri=${encodeURIComponent(this.redirectUri)}&`+
       'prompt=none' // can be consent to force user to reclick authorize button
     )
