@@ -1,6 +1,6 @@
 const { app } = require('electron')
 const { AuthWindow, END_STATES } = require('./discord/auth-window')
-const DiscordEventListener = require('./discord/event-listener')
+const Events = require('./discord/events')
 
 const env = require('./env')
 
@@ -12,9 +12,9 @@ app.whenReady().then(() => {
     })
     .then((payload) => {
       // TODO: store payload somewhere?
-      return new DiscordEventListener(payload.access_token)
+      return new Events(env.clientId, payload.access_token)
     })
-    .then((eventListener) => {
-      eventListener.start()
+    .then((events) => {
+      events.connect()
     })
 })
