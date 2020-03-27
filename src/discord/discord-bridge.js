@@ -28,6 +28,7 @@ class DiscordBridge extends EventEmitter {
     return this
   }
 
+  // todo: handle reconnect when discord closes/reopens
   connect() {
     return new Promise(
       ((resolve, reject) => {
