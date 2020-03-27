@@ -28,7 +28,6 @@ class DiscordBridge extends EventEmitter {
     return this
   }
 
-  // todo: handle reconnect when discord closes/reopens
   connect() {
     return new Promise(
       ((resolve, reject) => {
@@ -58,12 +57,14 @@ class DiscordBridge extends EventEmitter {
           clearInterval(intervalTimeout)
         }
 
+        console.debug('connected to discord')
+        this.client.on('disconnected', this.onDisconnect)
         resolve()
       })
       .catch((e) => {
         if (e.message === 'Could not connect') {
           // avoid an extra param by using this as a flag indicating that we're doing a start-up connect attempt
-          if (intervalTimeout !== null) {
+          if (intervalTimeout === null) {
             // not a `reject()` because then the `connect` `Promise` will fail
             throw CONNECT_FAILURE.NOT_RUNNING
           }
@@ -86,6 +87,13 @@ class DiscordBridge extends EventEmitter {
     } else {
       this.emit(events.SHOW_MUTE_INDICATOR, false)
     }
+  }
+
+  onDisconnect = () => {
+    console.warn('disconnected from discord')
+    this.client.destroy()
+    this.emit(events.DISCONNECT)
+    this.connect()
   }
 
   onReady = () => {
