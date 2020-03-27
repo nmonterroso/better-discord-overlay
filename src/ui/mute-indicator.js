@@ -12,6 +12,8 @@ function createWindow() {
     y: 25,
     frame: false,
     show: false,
+    skipTaskbar: true,
+    opacity: .7,
     webPreferences: {
       nodeIntegration: true
     },
@@ -20,7 +22,6 @@ function createWindow() {
   win.setAspectRatio(1)
   win.setAlwaysOnTop(true, 'screen-saver')
   win.setIgnoreMouseEvents(true);
-  win.setOpacity(.7)
   // win.webContents.openDevTools()
   win.on('resize', () => {
     const [ width ] = win.getSize()
