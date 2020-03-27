@@ -9,28 +9,31 @@ const CONNECT_FAILURE = {
 
 class Events {
   constructor(clientId, accessToken) {
-    this.clientId = clientId
     this.accessToken = accessToken
-    this.connectPromise = null
     this.client = null
+    this.clientId = clientId
   }
 
   connect() {
-    return new Promise(((resolve, reject) => { this.tryConnect(resolve, reject, true) }))
-      .catch((error) => {
-        if (error !== CONNECT_FAILURE.NOT_RUNNING) {
-          return Promise.reject(error)
-        }
+    return new Promise(
+      ((resolve, reject) => {
+        this
+          .tryConnect(resolve, reject)
+          .catch((error) => {
+            if (error !== CONNECT_FAILURE.NOT_RUNNING) {
+              reject(error)
+              return
+            }
 
-        return new Promise(((resolve, reject) => {
-          const intervalTimeout = setInterval(() => {
-            this.tryConnect(resolve, reject, false, intervalTimeout)
-          }, connectRetry)
-        }))
-      })
+            const intervalTimeout = setInterval(() => {
+              this.tryConnect(resolve, reject, intervalTimeout)
+            }, connectRetry)
+        })
+      }))
+      .then(() => { this.login() })
   }
 
-  tryConnect(resolve, reject, rejectOnNotRunning, intervalTimeout = null) {
+  tryConnect(resolve, reject, intervalTimeout = null) {
     this.client = new discord.Client({ transport: 'ipc' })
     this.client.on('ready', this.onReady) // when connect'd
 
@@ -44,8 +47,10 @@ class Events {
       })
       .catch((e) => {
         if (e.message === 'Could not connect') {
-          if (rejectOnNotRunning) {
-            reject(CONNECT_FAILURE.NOT_RUNNING)
+          // avoid an extra param by using this as a flag indicating that we're doing a start-up connect attempt
+          if (intervalTimeout !== null) {
+            // not a `reject()` because then the `connect` `Promise` will fail
+            throw CONNECT_FAILURE.NOT_RUNNING
           }
 
           return
@@ -56,8 +61,12 @@ class Events {
       })
   }
 
-  onReady = () => {
+  login() {
+    return this.client.authenticate(this.accessToken)
+  }
 
+  onReady = () => {
+    console.log('ready')
   }
 }
 
