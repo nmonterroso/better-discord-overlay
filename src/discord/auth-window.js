@@ -9,7 +9,7 @@ function createWindow() {
   })
 }
 
-const scopes = ['rpc', 'rpc.api']
+const scopes = ['rpc'/*, 'rpc.api'*/]
 
 const END_STATES = {
   ERROR_UNKNOWN: 1,
