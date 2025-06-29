@@ -61,7 +61,9 @@ class AuthWindow {
       // TODO: check response code, if non-200 then reject(END_STATES.AUTH_CANCELED)
       this.window.webContents
         .executeJavaScript('getAccessToken()')
-        .then((jsonString) => JSON.parse(jsonString))
+        .then((jsonString) => {
+          return JSON.parse(jsonString)
+        })
         .then((accessToken) => {
           this.authComplete = true
           resolve(accessToken)

@@ -2,14 +2,14 @@ const { screen, BrowserWindow } = require('electron')
 const events = require('../discord/events')
 
 function createWindow() {
-  const { width: screenWidth } = screen.getPrimaryDisplay().workAreaSize
-  const windowSize = 100
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize
+  const windowSize = 65
 
   let win = new BrowserWindow({
     width: windowSize,
     height: windowSize,
-    x: Math.floor((screenWidth - windowSize) / 2),
-    y: 25,
+    x: Math.floor((screenWidth - windowSize) / 2) + 1427,  // right side
+    y: 1440 - windowSize - 90,  // bottom side
     frame: false,
     show: false,
     skipTaskbar: true,
