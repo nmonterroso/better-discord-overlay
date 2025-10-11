@@ -8,8 +8,10 @@ function createWindow() {
   let win = new BrowserWindow({
     width: windowSize,
     height: windowSize,
-    x: Math.floor((screenWidth - windowSize) / 2) + 1427,  // right side
-    y: 1440 - windowSize - 90,  // bottom side
+    // x: Math.floor((screenWidth - windowSize) / 2) + 1502,  // right side
+    // y: 1440 - windowSize - 90,  // bottom side
+    x: screenWidth - windowSize - 4,
+    y: 660,
     frame: false,
     show: false,
     skipTaskbar: true,
