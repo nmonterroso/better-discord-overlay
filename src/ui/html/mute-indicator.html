@@ -5,18 +5,75 @@
       margin: 0;
       background-color: #e9e9e9;
       text-align: center;
+      -webkit-user-select: none;
+      -webkit-app-region: drag; /* draggable when unlocked */
+      position: relative;
     }
 
     img {
       width: 100%;
     }
+
+    .lock-toggle {
+      position: absolute;
+      right: 4px;
+      top: 4px; /* move to top-right */
+      width: 16px;
+      height: 16px;
+      line-height: 16px;
+      text-align: center;
+      font-size: 14px;
+      background: rgba(0,0,0,0.15);
+      border-radius: 3px;
+      cursor: pointer;
+      -webkit-app-region: no-drag;
+      opacity: 1;
+      transition: opacity 120ms ease-in-out;
+      color: #222;
+    }
+
+    body.locked .lock-toggle { opacity: 0; }
+    body.locked:hover .lock-toggle { opacity: 1; }
+    /* When locked, disable dragging the window */
+    body.locked { -webkit-app-region: no-drag; }
   </style>
 </head>
 <body>
+  <img src="img/muted-icon.svg" />
+  <div class="lock-toggle" id="lockToggle" title="Toggle lock">🔓</div>
 
+  <script>
+    const { ipcRenderer } = require('electron')
 
-<img src="img/muted-icon.svg" />
+    const body = document.body
+    const lockToggle = document.getElementById('lockToggle')
 
+    function setLockedUI(locked) {
+      if (locked) {
+        body.classList.add('locked')
+        lockToggle.textContent = '🔒'
+      } else {
+        body.classList.remove('locked')
+        lockToggle.textContent = '🔓'
+      }
+    }
 
+    let currentLocked = false
+    ipcRenderer.on('mute-indicator:state', (_evt, payload) => {
+      currentLocked = !!(payload && payload.locked)
+      setLockedUI(currentLocked)
+    })
+
+    // Request initial state
+    ipcRenderer.send('mute-indicator:get-state')
+
+    lockToggle.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      currentLocked = !currentLocked
+      setLockedUI(currentLocked)
+      ipcRenderer.send('mute-indicator:set-locked', currentLocked)
+    })
+  </script>
 </body>
 </html>
