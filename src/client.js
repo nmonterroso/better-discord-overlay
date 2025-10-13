@@ -28,6 +28,7 @@ app.whenReady().then(() => {
     try {
       const raw = fs.readFileSync(credPath, 'utf8')
       const parsed = JSON.parse(raw)
+      console.log(`Loaded cached credentials from: ${credPath}`)
       if (parsed && parsed.expires_at) {
         console.log(`Loaded cached credentials. Expires: ${fmtExpiry(parsed.expires_at)}`)
       }
@@ -42,6 +43,7 @@ app.whenReady().then(() => {
     }
     try {
       fs.writeFileSync(credPath, JSON.stringify(enriched))
+      console.log(`Saved credentials to: ${credPath}`)
       if (enriched.expires_at) {
         console.log(`Saved credentials. Expires: ${fmtExpiry(enriched.expires_at)}`)
       }
