@@ -53,9 +53,14 @@ class MuteIndicator {
       ? { x: this.settings.x, y: this.settings.y }
       : centerPosition(this.windowSize * 2, this.windowSize)
 
+    const initialWidth = (this.settings && typeof this.settings.width === 'number')
+      ? this.settings.width : (this.windowSize * 2)
+    const initialHeight = (this.settings && typeof this.settings.height === 'number')
+      ? this.settings.height : this.windowSize
+
     const win = new BrowserWindow({
-      width: this.windowSize * 2, // two side-by-side cells
-      height: this.windowSize,
+      width: initialWidth, // two side-by-side cells by default
+      height: initialHeight,
       x: initialPos.x,
       y: initialPos.y,
       frame: false,
@@ -69,6 +74,8 @@ class MuteIndicator {
         contextIsolation: false,
       },
     })
+
+    // No aspect ratio enforcement needed without resize
 
     win.setAlwaysOnTop(true, 'screen-saver')
     this.applyLockMouseBehavior(win)
@@ -87,15 +94,25 @@ class MuteIndicator {
       }, 200)
     })
 
+    // Persist size when resized (only possible when unlocked)
+    let resizeSaveTimer = null
+    win.on('resize', () => {
+      const [width, height] = win.getSize()
+      this.settings.width = width
+      this.settings.height = height
+      clearTimeout(resizeSaveTimer)
+      resizeSaveTimer = setTimeout(() => {
+        this.saveSettings()
+      }, 200)
+    })
+
     win.loadFile('ui/html/mute-indicator.html')
     return win
   }
 
   applyLockMouseBehavior(win) {
-    // Always allow mouse events so the lock toggle is clickable.
-    // Dragging is controlled in the renderer via CSS app-region.
+    // No custom drag regions; use native title bar when unlocked (frame=true)
     win.setIgnoreMouseEvents(false)
-    // Inform renderer of lock state
     if (win && win.webContents) {
       win.webContents.send('mute-indicator:state', { locked: this.isLocked() })
     }
@@ -106,8 +123,10 @@ class MuteIndicator {
     const locked = this.storage.read('window.locked', false)
     const x = this.storage.read('window.x')
     const y = this.storage.read('window.y')
+    const width = this.storage.read('window.width', this.windowSize * 2)
+    const height = this.storage.read('window.height', this.windowSize)
     const hotkey = this.storage.read('global_mic_mute_hotkey', 'Ctrl+Alt+Shift+\\') // reserved for future use
-    const settings = { locked }
+    const settings = { locked, width, height }
     if (typeof x === 'number') settings.x = x
     if (typeof y === 'number') settings.y = y
     if (typeof hotkey === 'string') settings.hotkey = hotkey
@@ -119,6 +138,8 @@ class MuteIndicator {
     if ('locked' in this.settings) this.storage.write('window.locked', !!this.settings.locked)
     if ('x' in this.settings) this.storage.write('window.x', this.settings.x)
     if ('y' in this.settings) this.storage.write('window.y', this.settings.y)
+    if ('width' in this.settings) this.storage.write('window.width', this.settings.width)
+    if ('height' in this.settings) this.storage.write('window.height', this.settings.height)
     if ('hotkey' in this.settings) this.storage.write('global_mic_mute_hotkey', this.settings.hotkey)
   }
 
@@ -130,12 +151,9 @@ class MuteIndicator {
     ipcMain.on('mute-indicator:set-locked', (_event, locked) => {
       this.settings.locked = !!locked
       this.saveSettings()
+      // Notify renderer so it can enable/disable drag regions via CSS
       this.applyLockMouseBehavior(this.window)
-      // If unlocked, ensure visible regardless of show state
-      if (!this.isLocked() && !this.window.isVisible()) {
-        this.window.showInactive()
-      }
-      // Keep window visible regardless of lock; locking only disables drag
+      if (!this.window.isVisible()) this.window.showInactive()
     })
   }
 }
