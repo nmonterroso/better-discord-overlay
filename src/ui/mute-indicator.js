@@ -1,4 +1,4 @@
-const { app, screen, BrowserWindow, ipcMain } = require('electron')
+const { app, screen, BrowserWindow, ipcMain, Menu } = require('electron')
 const events = require('../discord/events')
 
 function centerPosition(windowWidth, windowHeight) {
@@ -107,6 +107,51 @@ class MuteIndicator {
     })
 
     win.loadFile('ui/html/mute-indicator.html')
+
+    // Custom context menu (right-click)
+    win.webContents.on('context-menu', (event, params) => {
+      event.preventDefault()
+      const locked = this.isLocked()
+      const template = [
+        {
+          label: locked ? 'Unlock' : 'Lock',
+          click: () => {
+            this.settings.locked = !locked
+            this.saveSettings()
+            this.applyLockMouseBehavior(this.window)
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Center Window',
+          click: () => {
+            try {
+              const [w, h] = this.window.getSize()
+              const bounds = this.window.getBounds()
+              const display = screen.getDisplayMatching(bounds)
+              const wa = display.workArea
+              const x = Math.floor(wa.x + (wa.width - w) / 2)
+              const y = Math.floor(wa.y + (wa.height - h) / 2)
+              this.window.setPosition(x, y)
+              this.settings.x = x
+              this.settings.y = y
+              this.saveSettings()
+            } catch (_) {}
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Toggle DevTools',
+          click: () => { try { this.window.webContents.toggleDevTools() } catch (_) {} }
+        },
+        {
+          label: 'Quit',
+          click: () => { try { app.quit() } catch (_) {} }
+        }
+      ]
+      const menu = Menu.buildFromTemplate(template)
+      menu.popup({ window: this.window, x: params.x, y: params.y })
+    })
     return win
   }
 
@@ -154,6 +199,47 @@ class MuteIndicator {
       // Notify renderer so it can enable/disable drag regions via CSS
       this.applyLockMouseBehavior(this.window)
       if (!this.window.isVisible()) this.window.showInactive()
+    })
+
+    // Renderer-requested context menu (fallback when drag regions swallow default event)
+    ipcMain.on('ui:contextmenu', (event, pos) => {
+      try {
+        const targetWin = BrowserWindow.fromWebContents(event.sender)
+        const locked = this.isLocked()
+        const template = [
+          {
+            label: locked ? 'Unlock' : 'Lock',
+            click: () => {
+              this.settings.locked = !locked
+              this.saveSettings()
+              this.applyLockMouseBehavior(this.window)
+            }
+          },
+          { type: 'separator' },
+          {
+            label: 'Center Window',
+            click: () => {
+              const [w, h] = targetWin.getSize()
+              const bounds = targetWin.getBounds()
+              const display = screen.getDisplayMatching(bounds)
+              const wa = display.workArea
+              const x = Math.floor(wa.x + (wa.width - w) / 2)
+              const y = Math.floor(wa.y + (wa.height - h) / 2)
+              targetWin.setPosition(x, y)
+              this.settings.x = x
+              this.settings.y = y
+              this.saveSettings()
+            }
+          },
+          { type: 'separator' },
+          { label: 'Toggle DevTools', click: () => { try { targetWin.webContents.toggleDevTools() } catch (_) {} } },
+          { label: 'Quit', click: () => { try { app.quit() } catch (_) {} } },
+        ]
+        const menu = Menu.buildFromTemplate(template)
+        const x = (pos && typeof pos.x === 'number') ? pos.x : undefined
+        const y = (pos && typeof pos.y === 'number') ? pos.y : undefined
+        menu.popup({ window: targetWin, x, y })
+      } catch (_) {}
     })
   }
 }

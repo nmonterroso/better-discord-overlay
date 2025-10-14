@@ -12,6 +12,26 @@
       height: 100%;
     }
 
+    /* Top drag handle (visible when unlocked) */
+    .dragbar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 20px;
+      -webkit-app-region: drag;
+      background: rgba(255,255,255,0.22);
+      border-bottom: 1px solid rgba(255,255,255,0.3);
+      box-sizing: border-box;
+    }
+    .dragbar .grip {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.8);
+      box-shadow: 8px 0 0 rgba(255,255,255,0.8), -8px 0 0 rgba(255,255,255,0.8);
+      margin: 8px auto 0;
+    }
+    body.locked .dragbar { display: none; -webkit-app-region: no-drag; background: transparent; border-bottom-color: transparent; }
+
     /* Grid layout: 2 columns x 1 row, centered content */
     .container {
       display: grid;
@@ -19,14 +39,13 @@
       grid-template-rows: 1fr;
       width: 100%;
       height: 100%;
-      align-items: center;   /* vertical center */
-      justify-items: center; /* horizontal center */
-      gap: 2px; /* small gap between icon and dot */
-      padding: 3px; /* small inner padding */
+      align-items: center;
+      justify-items: center;
+      gap: 2px;
+      padding: 3px;
       box-sizing: border-box;
-      -webkit-app-region: drag; /* allow moving the window */
+      /* do not mark content as draggable */
     }
-    body.locked .container { -webkit-app-region: no-drag; }
 
     .icon {
       width: auto;
@@ -63,32 +82,37 @@
       opacity: 1;
       transition: opacity 120ms ease-in-out;
       color: #ccc;
-      -webkit-app-region: no-drag; /* clickable even when content is draggable */
+      -webkit-app-region: no-drag;
     }
     body.locked .lock-toggle { opacity: 0; }
     body.locked:hover .lock-toggle { opacity: 1; }
   </style>
 </head>
 <body>
+  <div class="dragbar"><div class="grip"></div></div>
   <div class="container">
     <img class="icon" draggable="false" src="img/discord.png" alt="Discord" />
     <img id="stateDot" class="dot-img" src="img/green-dot.svg" alt="mute status" draggable="false" />
   </div>
-  <div class="lock-toggle" id="lockToggle" title="Toggle lock">🔓</div>
+  
 
   <script>
     const { ipcRenderer } = require('electron')
     const body = document.body
-    const lockToggle = document.getElementById('lockToggle')
+    
     const stateDot = document.getElementById('stateDot')
+
+    // Always suppress the default context menu and request the custom one
+    window.addEventListener('contextmenu', (e) => {
+      e.preventDefault()
+      ipcRenderer.send('ui:contextmenu', { x: e.x, y: e.y })
+    })
 
     function setLockedUI(locked) {
       if (locked) {
         body.classList.add('locked')
-        lockToggle.textContent = '🔒'
       } else {
         body.classList.remove('locked')
-        lockToggle.textContent = '🔓'
       }
     }
 
@@ -111,13 +135,7 @@
     // Request initial lock state
     ipcRenderer.send('mute-indicator:get-state')
 
-    lockToggle.addEventListener('click', (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      currentLocked = !currentLocked
-      setLockedUI(currentLocked)
-      ipcRenderer.send('mute-indicator:set-locked', currentLocked)
-    })
+    // Lock/Unlock via context menu only
   </script>
 </body>
 </html>
