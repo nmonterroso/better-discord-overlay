@@ -33,7 +33,9 @@
       width: 70%;
       height: 70%;
       object-fit: contain;
-      -webkit-app-region: no-drag;
+      -webkit-user-drag: none;
+      user-select: none;
+      /* inherits drag from parent/body; keep clickable elements as no-drag only where needed */
     }
 
     .dot {
@@ -41,7 +43,6 @@
       height: 70%;
       border-radius: 50%;
       background: #43a047; /* default unmuted */
-      -webkit-app-region: no-drag;
     }
     .dot.muted { background: #e53935; }
     .dot.unmuted { background: #43a047; }
@@ -70,7 +71,7 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="cell"><img class="icon" src="img/discord.png" alt="Discord" /></div>
+    <div class="cell"><img class="icon" draggable="false" src="img/discord.png" alt="Discord" /></div>
     <div class="cell"><div id="stateDot" class="dot unmuted" aria-label="mute status"></div></div>
   </div>
   <div class="lock-toggle" id="lockToggle" title="Toggle lock">🔓</div>
@@ -122,3 +123,4 @@
   </script>
 </body>
 </html>
+
