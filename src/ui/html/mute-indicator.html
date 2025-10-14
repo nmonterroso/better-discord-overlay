@@ -4,7 +4,7 @@
   <style>
     body {
       margin: 0;
-      background-color: #e9e9e9;
+      background-color: #303030;
       -webkit-user-select: none;
       -webkit-app-region: drag; /* draggable when unlocked */
       position: relative;
@@ -27,9 +27,12 @@
       justify-content: center;
     }
 
-    .emoji {
-      font-size: 44px;
-      line-height: 1;
+    .emoji { display: none; }
+
+    .icon {
+      width: 70%;
+      height: 70%;
+      object-fit: contain;
       -webkit-app-region: no-drag;
     }
 
@@ -67,7 +70,7 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="cell"><span class="emoji" aria-label="microphone" title="Microphone">🎤</span></div>
+    <div class="cell"><img class="icon" src="img/discord.png" alt="Discord" /></div>
     <div class="cell"><div id="stateDot" class="dot unmuted" aria-label="mute status"></div></div>
   </div>
   <div class="lock-toggle" id="lockToggle" title="Toggle lock">🔓</div>
