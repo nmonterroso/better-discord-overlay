@@ -4,17 +4,16 @@ const DiscordBridge = require('./discord/discord-bridge')
 const MuteIndicator = require('./ui/mute-indicator')
 
 const env = require('./env')
-const fs = require('fs')
-const path = require('path')
 const fetch = require('node-fetch')
 const { URLSearchParams } = require('url')
+const AppStorage = require('./app-storage')
 
 app.whenReady().then(() => {
+  const storage = new AppStorage(app)
   const bridge = new DiscordBridge(env.clientId)
-  const muteIndicator = new MuteIndicator(bridge)
+  const muteIndicator = new MuteIndicator(bridge, storage)
 
   muteIndicator.init()
-  const credPath = path.join(app.getPath('userData'), 'credentials.json')
 
   const fmtExpiry = (expiresAt) => {
     if (!expiresAt) return 'unknown'
@@ -25,15 +24,12 @@ app.whenReady().then(() => {
   }
 
   const loadCreds = () => {
-    try {
-      const raw = fs.readFileSync(credPath, 'utf8')
-      const parsed = JSON.parse(raw)
-      console.log(`Loaded cached credentials from: ${credPath}`)
-      if (parsed && parsed.expires_at) {
-        console.log(`Loaded cached credentials. Expires: ${fmtExpiry(parsed.expires_at)}`)
-      }
-      return parsed
-    } catch (_) { return null }
+    const parsed = storage.read('credentials', null)
+    console.log(`Loaded cached credentials from: ${storage.filePath}`)
+    if (parsed && parsed.expires_at) {
+      console.log(`Loaded cached credentials. Expires: ${fmtExpiry(parsed.expires_at)}`)
+    }
+    return parsed
   }
 
   const saveCreds = (payload) => {
@@ -41,13 +37,11 @@ app.whenReady().then(() => {
     if (payload && payload.expires_in && !payload.expires_at) {
       enriched.expires_at = Date.now() + (payload.expires_in * 1000)
     }
-    try {
-      fs.writeFileSync(credPath, JSON.stringify(enriched))
-      console.log(`Saved credentials to: ${credPath}`)
-      if (enriched.expires_at) {
-        console.log(`Saved credentials. Expires: ${fmtExpiry(enriched.expires_at)}`)
-      }
-    } catch (_) {}
+    storage.write('credentials', enriched)
+    console.log(`Saved credentials to: ${storage.filePath}`)
+    if (enriched.expires_at) {
+      console.log(`Saved credentials. Expires: ${fmtExpiry(enriched.expires_at)}`)
+    }
     return enriched
   }
 

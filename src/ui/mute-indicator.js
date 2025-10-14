@@ -1,20 +1,18 @@
 const { app, screen, BrowserWindow, ipcMain } = require('electron')
-const fs = require('fs')
-const path = require('path')
 const events = require('../discord/events')
 
-function centerPosition(windowSize) {
+function centerPosition(windowWidth, windowHeight) {
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize
   return {
-    x: Math.floor((screenWidth - windowSize) / 2),
-    y: Math.floor((screenHeight - windowSize) / 2),
+    x: Math.floor((screenWidth - windowWidth) / 2),
+    y: Math.floor((screenHeight - windowHeight) / 2),
   }
 }
 
 class MuteIndicator {
-  constructor(discordBridge) {
+  constructor(discordBridge, storage) {
     this.bridge = discordBridge
-    this.settingsPath = path.join(app.getPath('userData'), 'mute-indicator.json')
+    this.storage = storage
     this.windowSize = 65
     this.settings = this.loadSettings()
     this.window = this.createWindow()
@@ -24,9 +22,8 @@ class MuteIndicator {
   init() {
     this.subscribe()
     this.installIpcHandlers()
-    if (!this.isLocked()) {
-      this.window.showInactive()
-    }
+    // Always visible window
+    this.window.showInactive()
   }
 
   subscribe() {
@@ -36,19 +33,16 @@ class MuteIndicator {
 
   onShowMuteIndicator = (show) => {
     this.lastShowRequested = !!show
-    if (!this.isLocked()) {
-      if (!this.window.isVisible()) this.window.showInactive()
-      return
-    }
-    if (show && !this.window.isVisible()) {
-      this.window.showInactive()
-    } else if (!show && this.window.isVisible()) {
-      this.window.hide()
-    }
+    // Window is always visible; forward discord mute state to renderer
+    if (!this.window.isVisible()) this.window.showInactive()
+    try {
+      this.window.webContents.send('discord-mute:state', { muted: !!show })
+    } catch (_) {}
   }
 
   onDisconnect = () => {
-    this.window.hide()
+    // Keep window visible; optionally mark as unmuted
+    try { this.window.webContents.send('discord-mute:state', { muted: false }) } catch (_) {}
   }
 
   // --- internal helpers ---
@@ -57,10 +51,10 @@ class MuteIndicator {
   createWindow() {
     const initialPos = (this.settings && typeof this.settings.x === 'number' && typeof this.settings.y === 'number')
       ? { x: this.settings.x, y: this.settings.y }
-      : centerPosition(this.windowSize)
+      : centerPosition(this.windowSize * 2, this.windowSize)
 
     const win = new BrowserWindow({
-      width: this.windowSize,
+      width: this.windowSize * 2, // two side-by-side cells
       height: this.windowSize,
       x: initialPos.x,
       y: initialPos.y,
@@ -76,14 +70,10 @@ class MuteIndicator {
       },
     })
 
-    win.setAspectRatio(1)
     win.setAlwaysOnTop(true, 'screen-saver')
     this.applyLockMouseBehavior(win)
     // win.webContents.openDevTools()
-    win.on('resize', () => {
-      const [ width ] = win.getSize()
-      win.setSize(width, width)
-    })
+    // No square aspect ratio; leave as 2:1
 
     // Persist position when moved
     let moveSaveTimer = null
@@ -92,7 +82,9 @@ class MuteIndicator {
       this.settings.x = x
       this.settings.y = y
       clearTimeout(moveSaveTimer)
-      moveSaveTimer = setTimeout(() => this.saveSettings(), 200)
+      moveSaveTimer = setTimeout(() => {
+        this.saveSettings()
+      }, 200)
     })
 
     win.loadFile('ui/html/mute-indicator.html')
@@ -110,19 +102,24 @@ class MuteIndicator {
   }
 
   loadSettings() {
-    try {
-      const raw = fs.readFileSync(this.settingsPath, 'utf8')
-      const parsed = JSON.parse(raw)
-      return Object.assign({ locked: false }, parsed)
-    } catch (_) {
-      return { locked: false }
-    }
+    // Read from new nested keys with fallback to previous top-level keys
+    const locked = this.storage.read('window.locked', false)
+    const x = this.storage.read('window.x')
+    const y = this.storage.read('window.y')
+    const hotkey = this.storage.read('mic_mute_hotkey') // reserved for future use
+    const settings = { locked }
+    if (typeof x === 'number') settings.x = x
+    if (typeof y === 'number') settings.y = y
+    if (typeof hotkey === 'string') settings.hotkey = hotkey
+    return settings
   }
 
   saveSettings() {
-    try {
-      fs.writeFileSync(this.settingsPath, JSON.stringify(this.settings))
-    } catch (_) {}
+    if (!this.settings) return
+    if ('locked' in this.settings) this.storage.write('window.locked', !!this.settings.locked)
+    if ('x' in this.settings) this.storage.write('window.x', this.settings.x)
+    if ('y' in this.settings) this.storage.write('window.y', this.settings.y)
+    if ('hotkey' in this.settings) this.storage.write('mic_mute_hotkey', this.settings.hotkey)
   }
 
   installIpcHandlers() {
@@ -138,10 +135,7 @@ class MuteIndicator {
       if (!this.isLocked() && !this.window.isVisible()) {
         this.window.showInactive()
       }
-      // If locked and last requested show was false, hide
-      if (this.isLocked() && !this.lastShowRequested && this.window.isVisible()) {
-        this.window.hide()
-      }
+      // Keep window visible regardless of lock; locking only disables drag
     })
   }
 }

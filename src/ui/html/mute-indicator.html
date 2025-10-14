@@ -1,23 +1,52 @@
 <html>
 <head>
+  <meta charset="utf-8" />
   <style>
     body {
       margin: 0;
       background-color: #e9e9e9;
-      text-align: center;
       -webkit-user-select: none;
       -webkit-app-region: drag; /* draggable when unlocked */
       position: relative;
+      width: 100vw;
+      height: 100vh;
     }
 
-    img {
+    .wrap {
+      display: flex;
+      flex-direction: row;
       width: 100%;
+      height: 100%;
     }
+
+    .cell {
+      width: 50%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .emoji {
+      font-size: 44px;
+      line-height: 1;
+      -webkit-app-region: no-drag;
+    }
+
+    .dot {
+      width: 70%;
+      height: 70%;
+      border-radius: 50%;
+      background: #43a047; /* default unmuted */
+      -webkit-app-region: no-drag;
+    }
+    .dot.muted { background: #e53935; }
+    .dot.unmuted { background: #43a047; }
 
     .lock-toggle {
       position: absolute;
       right: 4px;
-      top: 4px; /* move to top-right */
+      top: 4px;
       width: 16px;
       height: 16px;
       line-height: 16px;
@@ -31,22 +60,23 @@
       transition: opacity 120ms ease-in-out;
       color: #222;
     }
-
     body.locked .lock-toggle { opacity: 0; }
     body.locked:hover .lock-toggle { opacity: 1; }
-    /* When locked, disable dragging the window */
     body.locked { -webkit-app-region: no-drag; }
   </style>
 </head>
 <body>
-  <img src="img/muted-icon.svg" />
+  <div class="wrap">
+    <div class="cell"><span class="emoji" aria-label="microphone" title="Microphone">🎤</span></div>
+    <div class="cell"><div id="stateDot" class="dot unmuted" aria-label="mute status"></div></div>
+  </div>
   <div class="lock-toggle" id="lockToggle" title="Toggle lock">🔓</div>
 
   <script>
     const { ipcRenderer } = require('electron')
-
     const body = document.body
     const lockToggle = document.getElementById('lockToggle')
+    const stateDot = document.getElementById('stateDot')
 
     function setLockedUI(locked) {
       if (locked) {
@@ -58,13 +88,25 @@
       }
     }
 
+    // Update dot based on discord mute state
+    function setMutedUI(muted) {
+      if (!stateDot) return
+      stateDot.classList.toggle('muted', !!muted)
+      stateDot.classList.toggle('unmuted', !muted)
+    }
+
     let currentLocked = false
     ipcRenderer.on('mute-indicator:state', (_evt, payload) => {
       currentLocked = !!(payload && payload.locked)
       setLockedUI(currentLocked)
     })
 
-    // Request initial state
+    ipcRenderer.on('discord-mute:state', (_evt, payload) => {
+      const muted = !!(payload && payload.muted)
+      setMutedUI(muted)
+    })
+
+    // Request initial lock state
     ipcRenderer.send('mute-indicator:get-state')
 
     lockToggle.addEventListener('click', (e) => {
