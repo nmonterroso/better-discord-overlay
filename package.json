@@ -6,16 +6,22 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "electron src/client",
-    "start-authserver": "node src/authserver"
+    "start-authserver": "node src/authserver",
+    "rebuild": "electron-rebuild -f -w win-audio"
   },
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^8.2.0"
+    "electron": "^8.2.0",
+    "electron-rebuild": "^3.2.9"
   },
   "dependencies": {
     "discord-rpc": "^3.1.0",
     "express": "^4.17.1",
-    "node-fetch": "^2.6.0"
+    "node-fetch": "^2.6.0",
+    "win-audio": "^3.0.5"
+  },
+  "overrides": {
+    "node-gyp": "^10"
   }
 }
