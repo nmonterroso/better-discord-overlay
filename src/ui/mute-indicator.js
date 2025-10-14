@@ -1,13 +1,13 @@
-const { app, screen, BrowserWindow, ipcMain, globalShortcut } = require('electron')
+const { app, screen, BrowserWindow, ipcMain } = require('electron')
 const fs = require('fs')
 const path = require('path')
 const events = require('../discord/events')
 
-function centerPosition(windowWidth, windowHeight) {
+function centerPosition(windowSize) {
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize
   return {
-    x: Math.floor((screenWidth - windowWidth) / 2),
-    y: Math.floor((screenHeight - windowHeight) / 2),
+    x: Math.floor((screenWidth - windowSize) / 2),
+    y: Math.floor((screenHeight - windowSize) / 2),
   }
 }
 
@@ -19,14 +19,11 @@ class MuteIndicator {
     this.settings = this.loadSettings()
     this.window = this.createWindow()
     this.lastShowRequested = false
-    this.mic = null
-    this.micMuted = null
   }
 
   init() {
     this.subscribe()
     this.installIpcHandlers()
-    this.initMicControl()
     if (!this.isLocked()) {
       this.window.showInactive()
     }
@@ -60,10 +57,10 @@ class MuteIndicator {
   createWindow() {
     const initialPos = (this.settings && typeof this.settings.x === 'number' && typeof this.settings.y === 'number')
       ? { x: this.settings.x, y: this.settings.y }
-      : centerPosition(this.windowSize * 2, this.windowSize)
+      : centerPosition(this.windowSize)
 
     const win = new BrowserWindow({
-      width: this.windowSize * 2, // two columns: discord icon + mic block
+      width: this.windowSize,
       height: this.windowSize,
       x: initialPos.x,
       y: initialPos.y,
@@ -79,10 +76,14 @@ class MuteIndicator {
       },
     })
 
+    win.setAspectRatio(1)
     win.setAlwaysOnTop(true, 'screen-saver')
     this.applyLockMouseBehavior(win)
     // win.webContents.openDevTools()
-    // no aspect lock; window is 2:1 now
+    win.on('resize', () => {
+      const [ width ] = win.getSize()
+      win.setSize(width, width)
+    })
 
     // Persist position when moved
     let moveSaveTimer = null
@@ -112,13 +113,9 @@ class MuteIndicator {
     try {
       const raw = fs.readFileSync(this.settingsPath, 'utf8')
       const parsed = JSON.parse(raw)
-      const withDefaults = Object.assign({ locked: false, hotkey: 'Control+Alt+M' }, parsed)
-      if (!withDefaults.hotkey || typeof withDefaults.hotkey !== 'string') {
-        withDefaults.hotkey = 'Control+Alt+M'
-      }
-      return withDefaults
+      return Object.assign({ locked: false }, parsed)
     } catch (_) {
-      return { locked: false, hotkey: 'Control+Alt+M' }
+      return { locked: false }
     }
   }
 
@@ -131,8 +128,6 @@ class MuteIndicator {
   installIpcHandlers() {
     ipcMain.on('mute-indicator:get-state', (event) => {
       event.sender.send('mute-indicator:state', { locked: this.isLocked() })
-      // also provide current mic state if known
-      this.sendMicState()
     })
 
     ipcMain.on('mute-indicator:set-locked', (_event, locked) => {
@@ -148,87 +143,6 @@ class MuteIndicator {
         this.window.hide()
       }
     })
-  }
-
-  // ---- System microphone control (Windows) ----
-  initMicControl() {
-    // Register global hotkey regardless; will no-op if control unavailable
-    try {
-      const combo = this.settings && this.settings.hotkey ? this.settings.hotkey : 'Control+Alt+M'
-      const ok = globalShortcut.register(combo, () => {
-        this.toggleMicMute()
-      })
-      if (!ok) console.warn(`Global shortcut registration failed for ${combo}`)
-    } catch (e) {
-      console.warn('Global shortcut error', e)
-    }
-
-    // Try to load Windows mic control library
-    try {
-      // Lazy require to avoid crashing if not installed
-      const winAudio = require('win-audio')  // requires node-gyp build: https://github.com/nodejs/node-gyp
-      if (winAudio && winAudio.mic) {
-        this.mic = winAudio.mic
-        // Initial state if accessible
-        this.micMuted = this.getMicMuted()
-        this.sendMicState()
-        // Listen for changes (best-effort; API differs by versions)
-        if (typeof this.mic.on === 'function') {
-          try {
-            this.mic.on('mute', (muted) => { this.micMuted = !!muted; this.sendMicState() })
-          } catch (_) {}
-          try {
-            this.mic.on('change', () => { this.micMuted = this.getMicMuted(); this.sendMicState() })
-          } catch (_) {}
-        }
-      } else {
-        console.warn('win-audio did not expose mic control')
-      }
-    } catch (e) {
-      console.warn('Mic control unavailable; install win-audio to enable. Error:', e && e.message)
-    }
-
-    // Cleanup on exit
-    app.on('will-quit', () => {
-      try { globalShortcut.unregister('Control+Alt+M') } catch (_) {}
-      try { globalShortcut.unregisterAll() } catch (_) {}
-    })
-  }
-
-  getMicMuted() {
-    try {
-      if (!this.mic) return null
-      if (typeof this.mic.isMuted === 'function') return !!this.mic.isMuted()
-      if (typeof this.mic.getMuted === 'function') return !!this.mic.getMuted()
-      if (Object.prototype.hasOwnProperty.call(this.mic, 'isMuted')) return !!this.mic.isMuted
-      return null
-    } catch (_) { return null }
-  }
-
-  toggleMicMute() {
-    if (!this.mic) {
-      console.warn('Mic toggle requested but mic control is unavailable (install win-audio)')
-      return
-    }
-    try {
-      if (typeof this.mic.toggle === 'function') {
-        this.mic.toggle()
-      } else {
-        const muted = !!this.getMicMuted()
-        if (muted && typeof this.mic.unmute === 'function') this.mic.unmute()
-        else if (!muted && typeof this.mic.mute === 'function') this.mic.mute()
-      }
-      // Update state after toggle
-      setTimeout(() => { this.micMuted = this.getMicMuted(); this.sendMicState() }, 50)
-    } catch (e) { console.warn('Mic toggle failed', e) }
-  }
-
-  sendMicState() {
-    try {
-      if (this.window && this.window.webContents) {
-        this.window.webContents.send('system-mic:state', { muted: this.micMuted })
-      }
-    } catch (_) {}
   }
 }
 

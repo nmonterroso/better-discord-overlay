@@ -1,6 +1,5 @@
 <html>
 <head>
-  <meta charset="utf-8" />
   <style>
     body {
       margin: 0;
@@ -11,41 +10,14 @@
       position: relative;
     }
 
-    .wrap {
-      display: flex;
-      flex-direction: row;
+    img {
       width: 100%;
-      height: 100vh;
     }
-
-    .discord-col, .mic-col {
-      width: 50%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .discord-col img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
-
-    .mic-block {
-      width: 100%;
-      height: 100%;
-      -webkit-app-region: no-drag; /* block itself clickable if needed later */
-      background: #9e9e9e; /* unknown/default */
-    }
-
-    .mic-block.muted { background: #e53935; }
-    .mic-block.unmuted { background: #43a047; }
 
     .lock-toggle {
       position: absolute;
       right: 4px;
-      top: 4px; /* top-right */
+      top: 4px; /* move to top-right */
       width: 16px;
       height: 16px;
       line-height: 16px;
@@ -67,14 +39,7 @@
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="discord-col">
-      <img src="img/muted-icon.svg" />
-    </div>
-    <div class="mic-col">
-      <div id="micBlock" class="mic-block"></div>
-    </div>
-  </div>
+  <img src="img/muted-icon.svg" />
   <div class="lock-toggle" id="lockToggle" title="Toggle lock">🔓</div>
 
   <script>
@@ -108,15 +73,6 @@
       currentLocked = !currentLocked
       setLockedUI(currentLocked)
       ipcRenderer.send('mute-indicator:set-locked', currentLocked)
-    })
-
-    // Mic block state updates
-    const micBlock = document.getElementById('micBlock')
-    ipcRenderer.on('system-mic:state', (_evt, payload) => {
-      if (!micBlock) return
-      const muted = !!(payload && payload.muted)
-      micBlock.classList.toggle('muted', muted)
-      micBlock.classList.toggle('unmuted', !muted)
     })
   </script>
 </body>
