@@ -106,7 +106,7 @@ class MuteIndicator {
     const locked = this.storage.read('window.locked', false)
     const x = this.storage.read('window.x')
     const y = this.storage.read('window.y')
-    const hotkey = this.storage.read('mic_mute_hotkey') // reserved for future use
+    const hotkey = this.storage.read('global_mic_mute_hotkey', 'Ctrl+Alt+Shift+\\') // reserved for future use
     const settings = { locked }
     if (typeof x === 'number') settings.x = x
     if (typeof y === 'number') settings.y = y
@@ -119,7 +119,7 @@ class MuteIndicator {
     if ('locked' in this.settings) this.storage.write('window.locked', !!this.settings.locked)
     if ('x' in this.settings) this.storage.write('window.x', this.settings.x)
     if ('y' in this.settings) this.storage.write('window.y', this.settings.y)
-    if ('hotkey' in this.settings) this.storage.write('mic_mute_hotkey', this.settings.hotkey)
+    if ('hotkey' in this.settings) this.storage.write('global_mic_mute_hotkey', this.settings.hotkey)
   }
 
   installIpcHandlers() {
